@@ -1,0 +1,42 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block title %} Dashboard {% endblock title %}
+{% block style %}
+{% endblock style %}
+{% block content %}
+    <div class="container mt-5">
+        <p class="card-text center">
+            <!--messages-->
+            {% if messages %}
+            <!-- <ul class="alert-warning"> -->
+            {% for message in messages %}
+            <span class="alert alert-{{message.tags}}">
+                {% if message.tags %} {% endif %}{{ message }}
+            </span>
+            {% endfor %}
+            <!-- </ul> -->
+            {% endif %}
+            <!--messages-->
+        </p>
+        <div class="row">
+            <div class="col-sm-6">
+                <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Compare two CSV file</h5>
+                    <p class="card-text">Compare the data in each row to find differences in values for corresponding records.</p>
+                    <a href="{% url 'upload_files' %}" class="btn btn-primary">Compare csv file</a>
+                </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Compare Json file</h5>
+                    <p class="card-text">Compare the json to find differences in key and values for corresponding Json.</p>
+                    <a href="{% url 'compare_json' %}" class="btn btn-primary">Compare Json</a>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

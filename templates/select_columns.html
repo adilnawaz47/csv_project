@@ -1,0 +1,29 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block title %}Select Columns{% endblock title %}
+{% block style %}
+{% endblock style %}
+{% block content %}
+<div class="container mt-3 mb-2">
+    <h2>Select Columns for Comparison</h2>
+    
+    <form method="POST" action="/compare/" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h3>File 1: {{ file1_name }}</h3>
+        {% for column in columns_file1 %}
+            <input type="checkbox" name="columns_file1" value="{{ column }}">{{ column }}<br>
+        {% endfor %}
+ 
+        <h3>File 2: {{ file2_name }}</h3>
+        {% for column in columns_file2 %}
+            <input type="checkbox" name="columns_file2" value="{{ column }}">{{ column }}<br>
+        {% endfor %}
+ 
+        <input type="hidden" name="file1_name" value="{{ file1_name }}">
+        <input type="hidden" name="file2_name" value="{{ file2_name }}">
+        
+        <button type="submit">Compare Selected Columns</button>
+    </form>
+</div>
+{% endblock content %}
+{% block script %}{% endblock script %}

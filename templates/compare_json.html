@@ -1,0 +1,195 @@
+{% extends 'home.html' %}
+{% load static %}
+{% block title %}Compare JSON{% endblock title %}
+
+{% block style %}
+    <style>
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px; /* Space between buttons */
+        }
+        button:disabled {
+            background-color: #cccccc; /* Grey background for disabled button */
+            cursor: not-allowed; /* Change cursor to not-allowed */
+        }
+        .json-diff {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 20px;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .json-box {
+            width: 48%;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            overflow: auto;
+            font-family: monospace;
+            white-space: pre-wrap; /* Ensure proper line wrapping */
+            position: relative;
+        }
+        /* Line numbering styles */
+        .line-numbers {
+            counter-reset: linenum; /* Reset the line number counter */
+        }
+        .line-numbers div {
+            counter-increment: linenum; /* Increment the counter for each div */
+            padding-left: 30px; /* Space for the line number */
+        }
+        .line-numbers div::before {
+            content: counter(linenum); /* Display the line number */
+            position: absolute;
+            left: 5px; /* Positioning for the line number */
+            color: gray; /* Color for line numbers */
+            width: 20px; /* Fixed width for line numbers */
+            text-align: right; /* Align numbers to the right */
+        }
+        .highlight-missing {
+            background-color: #ffe6e6; /* Light red for missing items */
+        }
+        .highlight-diff {
+            background-color: #fff5ba; /* Light yellow for different values */
+        }
+    </style>
+{% endblock style %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mt-2 mb-2" style="text-align-last: center;">Compare JSON Objects</h2>
+
+    <!-- Input section for entering JSON -->
+    <div class="json-diff" id="json-input-section">
+        <textarea id="input1" class="form-control h-50" rows="20" placeholder="Enter JSON 1" style="background: #f5ffb663"></textarea>
+        <textarea id="input2" class="form-control h-50" rows="20" placeholder="Enter JSON 2" style="background: #f5ffb663"></textarea>
+    </div>
+    
+    <!-- Button to trigger comparison -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+        <button id="compare-btn" class="btn btn-primary me-md-2" disabled>Compare JSON</button>
+        <button class="btn btn-primary" id="new-comparison-btn" style="display:none;">New Comparison</button>
+    </div>
+
+    <!-- Results section, initially hidden -->
+    <div id="results" style="display:none;"></div> <!-- This will display the comparison result -->
+</div>
+{% endblock content %}
+
+{% block script %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Function to enable/disable the compare button
+        function toggleCompareButton() {
+            const input1 = $("#input1").val().trim();
+            const input2 = $("#input2").val().trim();
+            // Enable the button only if both text areas have values
+            $("#compare-btn").prop("disabled", input1 === '' || input2 === ''); // Enable if both are filled
+        }
+
+        // Check input values on keyup
+        $("#input1, #input2").on("keyup", toggleCompareButton);
+        
+        // Initial check to set button state
+        toggleCompareButton();
+
+        $("#compare-btn").on("click", function() {
+            const csrfToken = '{{ csrf_token }}';
+            
+            const json_obj1 = $("#input1").val();
+            const json_obj2 = $("#input2").val();
+            
+            const mydata = {
+                csrfmiddlewaretoken: csrfToken,
+                json_obj1: json_obj1,
+                json_obj2: json_obj2
+            };
+            
+            $.ajax({
+                url: "{% url 'compare_json_ajax' %}",
+                method: "POST",
+                data: mydata,
+                success: function (data) {
+                    if (data.status === 'True') {
+                        // Hide input section and button
+                        $("#json-input-section").hide();
+                        $("#compare-btn").hide();
+                        $("#new-comparison-btn").show(); // Show the new comparison button
+
+                        // Display the comparison results
+                        displayDifferences(data.html_json1, data.html_json2);
+                    } else {
+                        alert('Comparison failed: ' + data.message);
+                    }
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert(thrownError);
+                }
+            });
+        });
+
+        // Click event for New Comparison button
+        $("#new-comparison-btn").on("click", function() {
+            // Clear the text areas
+            $("#input1").val('');
+            $("#input2").val('');
+            
+            // Show the input section and buttons
+            $("#json-input-section").show();
+            $("#compare-btn").show();
+            $("#new-comparison-btn").hide(); // Hide the new comparison button
+
+            // Hide the results
+            $("#results").hide();
+
+            // Reset compare button state
+            toggleCompareButton();
+        });
+    });
+
+    function displayDifferences(html_json1, html_json2) {
+        let resultDiv = $('#results');
+        
+        // Display the results div
+        resultDiv.show();
+        resultDiv.empty();
+
+        // Split the JSON string into lines
+        const lines1 = html_json1.split('\n');
+        const lines2 = html_json2.split('\n');
+
+        // Create the JSON output with line numbers
+        let json1WithNumbers = '<div class="json-box line-numbers">' + lines1.map(line => `<div>${line}</div>`).join('') + '</div>';
+        let json2WithNumbers = '<div class="json-box line-numbers">' + lines2.map(line => `<div>${line}</div>`).join('') + '</div>';
+
+        // Append the constructed JSON boxes to the results div
+        resultDiv.append(`
+            <div class="json-diff">
+                ${json1WithNumbers}
+                ${json2WithNumbers}
+            </div>
+        `);
+    }
+</script>
+{% endblock script %}
